@@ -32,7 +32,11 @@ conn.commit()
 # Regex to match Reddit username to
 name_regex = re.compile(r"\A[\w-]{3,20}\Z", re.UNICODE)
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='')
+
+@app.route('/')
+def root():
+	return app.send_static_file('index.html')
 
 @app.route('/getaddress/<user>')
 def hello(user):
