@@ -1,107 +1,132 @@
-// Add links to send tips
-$("div.noncollapsed ul.flat-list").each(function() {
-	//var user = $(this).parent().find("p.tagline a.author").text();
-	var user = "TheBlueMatt";
-	$(this).append("<li><a class='reddit_coinbase_give' href='javascript:'>give bitcoin</a></li>");
-	$(this).click(function() {
-		// The Coinbase access_token
-		var coinbase_access_token = "";
-		//TODO: Track its expiration instead of requesting a new one each time
+// The Coinbase access_token
+var coinbase_access_token = "";
+//TODO: Track its expiration instead of requesting a new one each time
 
+// Hook up a chrome message handler to get back messages when we finish OAUTH
+var login_success_callback;
+var login_failure_callback;
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+	sendResponse({});
+	if (message.code_token == undefined)
+		login_failure_callback("error connecting to coinbase");
+	else {
+		$.ajax("https://coinbase.com/oauth/token", {
+			type: "POST",
+			data: {
+				grant_type: "authorization_code",
+				code: message.code_token,
+				redirect_uri: "chrome-extension://jbbhpnomhffcdokijijihpgjlcfbcbik/oauth_response.html",
+				client_id: "08f13b440b5980b907cb5ec9e7628cc9960deab3e326a3b91433f9641866bf29",
+				client_secret: "016d0adf3cfeebab5f5bcd641e8641a67ac42f523d85d6415f1f2a7d39e38346"
+			},
+			success: function(response, textStatus, jqXHR) {
+				if (response.access_token != undefined && response.refresh_token != undefined) {
+					coinbase_access_token = response.access_token;
+					chrome.storage.local.set({'coinbase-refresh-token': response.refresh_token}, function() {});
+					login_success_callback();
+				} else {
+					console.log("Error getting Coinbase auth token:");
+					console.log(response);
+					login_failure_callback("error connecting to coinbase");
+				}
+			},
+			error: function(response, textStatus, jqXHR) {
+				console.log("Error getting auth_token from Coinbase after OAUTH");
+				console.log(response);
+				login_failure_callback("error connecting to coinbase");
+			},
+			cache: false
+		});
+	}
+});
+
+var checkCoinbaseLogin = function(success_callback, failure_callback) {
+	chrome.storage.local.get("coinbase-refresh-token", function(token) {
+		if (token["coinbase-refresh-token"] != "undefined") {
+			$.ajax("https://coinbase.com/oauth/token", {
+				type: "POST",
+				data: {
+					grant_type: "refresh_token",
+					refresh_token: token["coinbase-refresh-token"],
+					client_id: "08f13b440b5980b907cb5ec9e7628cc9960deab3e326a3b91433f9641866bf29",
+					client_secret: "016d0adf3cfeebab5f5bcd641e8641a67ac42f523d85d6415f1f2a7d39e38346"
+				},
+				success: function(response, textStatus, jqXHR) {
+					if (response.access_token != undefined && response.refresh_token != undefined) {
+						coinbase_access_token = response.access_token;
+						chrome.storage.local.set({'coinbase-refresh-token': response.refresh_token}, function() {});
+						success_callback();
+					} else {
+						console.log("Error getting Coinbase auth token:");
+						console.log(response);
+						failure_callback("not logged into coinbase");
+					}
+				},
+				error: function(response, textStatus, jqXHR) {
+					failure_callback("not logged into coinbase");
+				}
+			});
+		} else
+			failure_callback("not logged into coinbase");
+	});
+};
+
+// Opens up a Coinbase OAUTH window
+var coinbaseLogin = function(success_callback, failure_callback) {
+	login_success_callback = success_callback;
+	login_failure_callback = failure_callback;
+	window.showModalDialog("https://coinbase.com/oauth/authorize?response_type=code&client_id=08f13b440b5980b907cb5ec9e7628cc9960deab3e326a3b91433f9641866bf29&client_secret=016d0adf3cfeebab5f5bcd641e8641a67ac42f523d85d6415f1f2a7d39e38346&redirect_uri=chrome-extension://jbbhpnomhffcdokijijihpgjlcfbcbik/oauth_response.html&scope=send");
+};
+
+
+// Add links to send tips
+var addLinks = function() {
+	var user = $(this).parent().find("p.tagline a.author").text();
+	user = "F";//TODO
+	$(this).append('<li class="reddit_coinbase_li"></li>');
+
+	var onGiveBitcoinClick = function() {};
+	var liElement = $(this).find('.reddit_coinbase_li');
+
+	// The amount to send
+	var sendAmount = 0;
+
+	var onSend = function() {
+		sendAmount = liElement.find('.reddit_coinbase_send_value').val();
+		console.log(sendAmount);
+
+		liElement.find('.reddit_coinbase_send_form').remove();
+		liElement.find('.reddit_coinbase_link').remove();
+		liElement.find('.reddit_coinbase_failed').remove();
+		liElement.append('<span class="reddit_coinbase_sending">sending ' + sendAmount + ' BTC<img style="width: 10px; height: 10px;" class="reddit_coinbase_spinner" src="' + chrome.extension.getURL('ajax-loader.gif') + '" /></span>');
+
+		onGiveBitcoinClick();
+	};
+
+	var enableInput = function() {
+		liElement.append('<form action="javascript:" class="reddit_coinbase_send_form" style="font:normal x-small verdana,arial,helvetica,sans-serif">Send <input type="text" pattern="[0-9]*\.[0-9]*" size="8" class="reddit_coinbase_send_value" style="font:normal x-small verdana,arial,helvetica,sans-serif" value="0.001"/> BTC <input type="submit" class="reddit_coinbase_send_submit" value="Go" style="font:normal x-small verdana,arial,helvetica,sans-serif" /></form>');
+		liElement.find('.reddit_coinbase_link').remove();
+		liElement.find('.reddit_coinbase_sending').remove();
+		liElement.find('.reddit_coinbase_failed').remove();
+		liElement.find('.reddit_coinbase_send_submit').on('click', onSend);
+	};
+
+	var addLink = function() {
+		liElement.append('<a class="reddit_coinbase_link" href="javascript:">give bitcoin</a>');
+		liElement.find('.reddit_coinbase_send_form').remove();
+		liElement.find('.reddit_coinbase_sending').remove();
+		liElement.find('.reddit_coinbase_link').on('click', enableInput);
+	};
+
+	var sendFailed = function(msg) {
+		addLink();
+		liElement.prepend('<span class="reddit_coinbase_failed">' + msg + '...</span>');
+		liElement.find('.reddit_coinbase_link').text('try again');
+	}
+
+	onGiveBitcoinClick = function() {
 		// The destination user's Bitcoin address
 		var destination_address = "";
-
-		var login_success_callback;
-		var login_failure_callback;
-		chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-			sendResponse({});
-console.log(message);
-			if (message.code_token == undefined)
-				login_failure_callback("Please allow us to access your coinbase account");
-			else {
-console.log("3");
-				$.ajax("https://coinbase.com/oauth/token", {
-					type: "POST",
-					data: {
-						grant_type: "authorization_code",
-						code: message.code_token,
-						redirect_uri: "chrome-extension://jbbhpnomhffcdokijijihpgjlcfbcbik/oauth_response.html",
-						client_id: "08f13b440b5980b907cb5ec9e7628cc9960deab3e326a3b91433f9641866bf29",
-						client_secret: "016d0adf3cfeebab5f5bcd641e8641a67ac42f523d85d6415f1f2a7d39e38346"
-					},
-					success: function(response, textStatus, jqXHR) {
-console.log("4");
-						if (response.access_token != undefined && response.refresh_token != undefined) {
-							coinbase_access_token = response.access_token;
-							chrome.storage.local.set({'coinbase-refresh-token': response.refresh_token}, function() {});
-							login_success_callback();
-						} else {
-							console.log("Error getting Coinbase auth token:");
-							console.log(response);
-							failure_callback("Unknown error getting Coinbase auth token");
-						}
-					},
-					error: function(response, textStatus, jqXHR) {
-						console.log("Error getting auth_token from Coinbase after OAUTH");
-						console.log(response);
-						login_failure_callback("Unknown error authenticating with Coinbase");
-					},
-					cache: false
-				});
-			}
-		});
-
-		// Opens up a Coinbase OAUTH window
-		var coinbaseLogin = function(success_callback, failure_callback) {
-console.log("5");
-			login_success_callback = success_callback;
-			login_failure_callback = failure_callback;
-			window.showModalDialog("https://coinbase.com/oauth/authorize?response_type=code&client_id=08f13b440b5980b907cb5ec9e7628cc9960deab3e326a3b91433f9641866bf29&client_secret=016d0adf3cfeebab5f5bcd641e8641a67ac42f523d85d6415f1f2a7d39e38346&redirect_uri=chrome-extension://jbbhpnomhffcdokijijihpgjlcfbcbik/oauth_response.html&scope=send");
-		};
-
-		// TODO: This is broken somewhere
-		var checkCoinbaseLogin = function(success_callback, failure_callback) {
-			chrome.storage.local.get("coinbase-refresh-token", function(token) {
-console.log("6");
-				if (token != "undefined") {
-console.log("7");
-					$.ajax("https://coinbase.com/oauth/token", {
-						type: "POST",
-						data: {
-							grant_type: "refresh_token",
-							refresh_token: token,
-							client_id: "08f13b440b5980b907cb5ec9e7628cc9960deab3e326a3b91433f9641866bf29",
-							client_secret: "016d0adf3cfeebab5f5bcd641e8641a67ac42f523d85d6415f1f2a7d39e38346"
-						},
-						success: function(response, textStatus, jqXHR) {
-console.log("8");
-							$.ajax("https://coinbase.com/api/v1/users", {
-								type: "GET",
-								success: function(response, textStatus, jqXHR) {
-console.log("9");
-									if (response.access_token != undefined && response.refresh_token != undefined) {
-										coinbase_access_token = response.access_token;
-										chrome.storage.local.set({'coinbase-refresh-token': response.refresh_token}, function() {});
-										success_callback();
-									} else {
-										console.log("Error refreshing Coinbase auth token:");
-										console.log(response);
-										failure_callback("Unknown error refreshing Coinbase auth token");
-									}
-								},
-								error: function(response, textStatus, jqXHR) {
-									failure_callback("Please login to Coinbase and try again");
-								}
-							});
-						},
-						error: function(response, textStatus, jqXHR) {
-							failure_callback("Please login to Coinbase and try again");
-						}
-					});
-				} else
-					failure_callback("Please login to Coinbase and try again");
-			});
-		}
 
 		// Sends money using Coinbase
 		var sendMoney = function(success_callback, failure_callback) {
@@ -111,23 +136,25 @@ console.log("9");
 					access_token: coinbase_access_token,
 					transaction: {
 						to: destination_address,
-						amount: "0.0001", //TODO
+						amount: sendAmount,
 						notes: "Tip from a Reddit user"
 					}
 				},
 				success: function(response, textStatus, jqXHR) {
 					if (response.success == true)
 						success_callback();
-					else {
+					else if (response.errors[0].indexOf("You don't have that much") == 0) {
+						failure_callback("not enough funds");
+					} else {
 						console.log("Error sending money:");
 						console.log(response);
-						failure_callback("Error sending money"); // TODO (out of funds, etc)
+						failure_callback("unknown error sending");
 					}
 				},
 				error: function(response, textStatus, jqXHR) {
 					console.log("Error sending money:");
 					console.log(response);
-					failure_callback("Unknown error trying to send money");
+					failure_callback("unknown error sending");
 				}
 			});
 		};
@@ -142,13 +169,13 @@ console.log("9");
 					} else {
 						console.log("Error getting address for send:");
 						console.log(response);
-						failure_callback("Unknown error getting address for destination.");
+						failure_callback("unknown error sending");
 					}
 				},
 				error: function(response, textStatus, jqXHR) {
-					console.log("Failed to create new user for send:");
+					console.log("Failed to get address for send::");
 					console.log(response);
-					failure_callback("Unknown error getting address for destination.");
+					failure_callback("unknown error sending");
 				}
 			});
 		};
@@ -159,11 +186,12 @@ console.log("9");
 					sendMoney(function() {
 							alert("OMG, IT WORKED!!!11one");
 						}, function(msg) {
-							alert(msg);
+							// Failed to send (not enough funds, etc)
+							sendFailed(msg);
 					});
 				}, function(msg) {
 					// Failed to create user...
-					alert(msg);
+					sendFailed(msg);
 			});
 		}
 
@@ -177,8 +205,14 @@ console.log("9");
 						postAuth();
 					}, function(msg) {
 						// Failed to get user to login to their Coinbase acct...
-						alert(msg);
+						sendFailed(msg);
 				});
-		});
-	});
-});
+		})
+	};
+
+	// Now add the link and enable the whole thing
+	addLink();
+};
+
+//$("div.noncollapsed ul.flat-list").each(addLinks);
+$("div.entry ul.flat-list").each(addLinks);

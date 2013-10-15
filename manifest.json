@@ -18,5 +18,7 @@
 			"matches": ["http://www.reddit.com/*"],
 			"js": ["jquery.js", "reddit_inject.js"]
 		}
-	]
+	],
+
+	"web_accessible_resources": [ "ajax-loader.gif" ]
 }
