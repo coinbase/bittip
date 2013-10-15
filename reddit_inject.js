@@ -15,7 +15,7 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
 			data: {
 				grant_type: "authorization_code",
 				code: message.code_token,
-				redirect_uri: "chrome-extension://jbbhpnomhffcdokijijihpgjlcfbcbik/oauth_response.html",
+				redirect_uri: chrome.extension.getURL("/oauth_response.html"),
 				client_id: "08f13b440b5980b907cb5ec9e7628cc9960deab3e326a3b91433f9641866bf29",
 				client_secret: "016d0adf3cfeebab5f5bcd641e8641a67ac42f523d85d6415f1f2a7d39e38346"
 			},
@@ -75,7 +75,7 @@ var checkCoinbaseLogin = function(success_callback, failure_callback) {
 var coinbaseLogin = function(success_callback, failure_callback) {
 	login_success_callback = success_callback;
 	login_failure_callback = failure_callback;
-	window.showModalDialog("https://coinbase.com/oauth/authorize?response_type=code&client_id=08f13b440b5980b907cb5ec9e7628cc9960deab3e326a3b91433f9641866bf29&client_secret=016d0adf3cfeebab5f5bcd641e8641a67ac42f523d85d6415f1f2a7d39e38346&redirect_uri=chrome-extension://jbbhpnomhffcdokijijihpgjlcfbcbik/oauth_response.html&scope=send");
+	window.showModalDialog("https://coinbase.com/oauth/authorize?response_type=code&client_id=08f13b440b5980b907cb5ec9e7628cc9960deab3e326a3b91433f9641866bf29&client_secret=016d0adf3cfeebab5f5bcd641e8641a67ac42f523d85d6415f1f2a7d39e38346&scope=send&redirect_uri=" + chrome.extension.getURL("/oauth_response.html"));
 };
 
 
