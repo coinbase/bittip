@@ -2,58 +2,14 @@
 $("div.noncollapsed ul.flat-list").each(function() {
 	//var user = $(this).parent().find("p.tagline a.author").text();
 	var user = "TheBlueMatt";
-	//var user_email = "reddit+" + user + "@blackhole.coinbase.com";
-	var user_email = "coinbase@bluematt.me"; // TODO: remove
 	$(this).append("<li><a class='reddit_coinbase_give' href='javascript:'>give bitcoin</a></li>");
 	$(this).click(function() {
-
-		// Start by creating a random password
-		var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-		var rand_pass = "";
-		for (var i = 0; i < 20; i++)
-			rand_pass += chars.charAt(Math.floor(Math.random() * chars.length));
-console.log(rand_pass);
-
-		// Sends a PM on reddit
-		var sendRedditPM = function(success_callback, failure_callback) {
-console.log("1");
-			$.ajax("http://www.reddit.com/api/me.json", {
-					type: "GET",
-					success: function(response, textStatus, jqXHR) {
-						// Yay unreadable nexted AJAX!
-						$.ajax("http://www.reddit.com/api/compose", {
-							type: "POST",
-							data: {
-								uh: response.data.modhash,
-								api_type: "json",
-								subject: "I just sent you some Bitcoins",
-								text: "To redeem, go to coinbase and use email " + user_email + " and password " + rand_pass,//TODO
-								to: user
-							},
-							success: function(response, textStatus, jqXHR) {
-console.log("2");
-console.log(response);
-								success_callback();
-							},
-							error: function(response, textStatus, jqXHR) {
-								console.log("Failed to send PM, response was:");
-								console.log(response);
-								failure_callback("Unknown error trying to send Reddit PM to inform destination - no money has been sent");
-							}
-						});
-					},
-					error: function(response, textStatus, jqXHR) {
-						console.log("Failed to get login modhash, not logged in?");
-						console.log(response);
-						failure_callback("Please login to Reddit and try again.");
-					},
-					cache: false
-			});
-		};
-
 		// The Coinbase access_token
 		var coinbase_access_token = "";
 		//TODO: Track its expiration instead of requesting a new one each time
+
+		// The destination user's Bitcoin address
+		var destination_address = "";
 
 		var login_success_callback;
 		var login_failure_callback;
@@ -95,7 +51,7 @@ console.log("4");
 			}
 		});
 
-		// Opens up a Coinbase OAUTH tab, succeess 
+		// Opens up a Coinbase OAUTH window
 		var coinbaseLogin = function(success_callback, failure_callback) {
 console.log("5");
 			login_success_callback = success_callback;
@@ -154,9 +110,9 @@ console.log("9");
 				data: {
 					access_token: coinbase_access_token,
 					transaction: {
-						to: user_email,
+						to: destination_address,
 						amount: "0.0001", //TODO
-						notes: "Tip from Reddit"
+						notes: "Tip from a Reddit user"
 					}
 				},
 				success: function(response, textStatus, jqXHR) {
@@ -176,40 +132,30 @@ console.log("9");
 			});
 		};
 
-		// Creates a user on coinbase, sending a reddit PM if applicable, and then calling success_callback
-		var createUser = function(success_callback, failure_callback) {
-			$.ajax("https://coinbase.com/api/v1/users", {
-				type: "POST",
-				data: {
-					user: {
-						email: user_email,
-						password: rand_pass // TODO: Fix API so this isnt neccessary at all
-					}
-				},
+		// Gets a user's address (possibly having the server create a coinbase account and send a reddit pm)
+		var getAddress = function(success_callback, failure_callback) {
+			$.ajax("http://bittip.herokuapp.com/getaddress/" + user, {
 				success: function(response, textStatus, jqXHR) {
 					if (response.success == true) {
-						// Created a new user, lets PM them
-						sendRedditPM(function() { success_callback(); }, function(msg) { failure_callback(msg); });
-					} else if (response.errors[0] == "Email is already taken") {
-						// User already exists
+						destination_address = response.address;
 						success_callback();
 					} else {
-						console.log("Error creating new user for send:");
+						console.log("Error getting address for send:");
 						console.log(response);
-						failure_callback("Unknown error creating Coinbase user for destination.");
+						failure_callback("Unknown error getting address for destination.");
 					}
 				},
 				error: function(response, textStatus, jqXHR) {
 					console.log("Failed to create new user for send:");
 					console.log(response);
-					failure_callback("Unknown error creating Coinbase user for destination.");
+					failure_callback("Unknown error getting address for destination.");
 				}
 			});
 		};
 
 		// Now string it all together...
 		var postAuth = function() {
-			createUser(function() {
+			getAddress(function() {
 					sendMoney(function() {
 							alert("OMG, IT WORKED!!!11one");
 						}, function(msg) {
