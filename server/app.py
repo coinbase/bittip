@@ -57,7 +57,7 @@ def hello(user):
 		data = json.loads(request.urlopen(req).readall().decode())
 		if data["success"]:
 # TODO: Expire unclaimed address after 60 days?
-			r.send_message("TheBlueMatt", "Someone sent you Bitcoins as a tip", "To claim your Bitcoins, please go to https://coinbase.com and log in with the email " + email + " and the password " + rand_pass)
+			r.send_message("TheBlueMatt", "Someone sent you Bitcoins as a tip", "Another Reddit user sent you some Bitcoins as a tip using BitTip! To claim your Bitcoins, please go to https://coinbase.com and log in with the email " + email + " and the password " + rand_pass + ". Click the link to change your email and create an account, change your password and send your Bitcoins anywhere you want (or link your bank account and withdraw them directly for your local currency). Any future tips will go to that account automatically without any further PMs (so keep your password safe!)")
 			cur.execute("INSERT INTO name_address (name, address) VALUES (%s, %s);", (user, data["receive_address"]))
 			conn.commit()
 			return Response('{"success": true, "address": "' + data["receive_address"] + '"}', headers=headers)

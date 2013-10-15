@@ -1,8 +1,8 @@
 {
 	"manifest_version": 2,
 
-	"name": "Coinbase Reddit Tipper",
-	"description": "Send tips to redditers using Coinbase!",
+	"name": "BitTip",
+	"description": "Send reddit users tips they can redeem directly for Bitcoins!",
 	"version": "1.0",
 	"offline_enabled": false,
 
