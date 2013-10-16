@@ -12,7 +12,9 @@ with open("password.txt") as f:
 	r_pass = f.read()
 
 r = praw.Reddit("BitTip")
+print("Logging into Reddit...")
 r.login("BitTipCoins", r_pass)
+print("done")
 
 
 parse.uses_netloc.append("postgres")
@@ -51,17 +53,19 @@ def hello(user):
 	if row is not None:
 		return Response('{"success": true, "address": "' + row[0] + '"}', headers=headers)
 	else:
-		email = user+"+reddit@bittip.io"
+		email = "reddit+"+user+"@blackhole.coinbase.com"
 		chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
 		rand_pass = ''
 		for i in range(15):
 			rand_pass = rand_pass + chars[os.urandom(1)[0] % 64]
 
+		print("Creating account for Reddit user " + user)
+
 		req = request.Request("https://coinbase.com/api/v1/users", parse.urlencode({"user[email]": email, "user[password]": rand_pass}).encode('utf-8'), headers = {"User-Agent": "BitTip/1.0"})
 		data = json.loads(request.urlopen(req).readall().decode())
 		if data["success"]:
 # TODO: Expire unclaimed address after 60 days?
-			r.send_message("TheBlueMatt", "Someone sent you Bitcoins as a tip", "Another Reddit user sent you some Bitcoins as a tip using BitTip! To claim your Bitcoins, please go to https://coinbase.com and log in with the email " + email + " and the password " + rand_pass + ". Click the link to change your email and create an account, change your password and send your Bitcoins anywhere you want (or link your bank account and withdraw them directly for your local currency). Any future tips will go to that account automatically without any further PMs (so keep your password safe!)")
+			r.send_message(user, "Someone sent you Bitcoins as a tip", "Another Reddit user sent you some Bitcoins as a tip using BitTip! To claim your Bitcoins, please go to https://coinbase.com and log in with the email " + email + " and the password " + rand_pass + ". Click the link to change your email and create an account, change your password and send your Bitcoins anywhere you want (or link your bank account and withdraw them directly for your local currency). Any future tips will go to that account automatically without any further PMs (so keep your password safe!)\nWant to send tips to other Redditers? Get the plugin at http://bittip.herokuapp.com")
 			cur.execute("INSERT INTO name_address (name, address) VALUES (%s, %s);", (user, data["receive_address"]))
 			conn.commit()
 			return Response('{"success": true, "address": "' + data["receive_address"] + '"}', headers=headers)

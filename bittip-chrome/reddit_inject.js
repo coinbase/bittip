@@ -82,7 +82,6 @@ var coinbaseLogin = function(success_callback, failure_callback) {
 // Add links to send tips
 var addLinks = function() {
 	var user = $(this).parent().find("p.tagline a.author").text();
-	user = "F";//TODO
 	$(this).append('<li class="reddit_coinbase_li"></li>');
 
 	var onGiveBitcoinClick = function() {};
@@ -104,11 +103,16 @@ var addLinks = function() {
 	};
 
 	var enableInput = function() {
-		liElement.append('<form action="javascript:" class="reddit_coinbase_send_form" style="font:normal x-small verdana,arial,helvetica,sans-serif">Send <input type="text" pattern="[0-9]*\.[0-9]*" size="8" class="reddit_coinbase_send_value" style="font:normal x-small verdana,arial,helvetica,sans-serif" value="0.001"/> BTC <input type="submit" class="reddit_coinbase_send_submit" value="Go" style="font:normal x-small verdana,arial,helvetica,sans-serif" /></form>');
-		liElement.find('.reddit_coinbase_link').remove();
-		liElement.find('.reddit_coinbase_sending').remove();
-		liElement.find('.reddit_coinbase_failed').remove();
-		liElement.find('.reddit_coinbase_send_submit').on('click', onSend);
+		chrome.storage.sync.get("default_value", function(token) {
+			if (token["default_value"] == undefined)
+				token["default_value"] = "0.001";
+
+			liElement.append('<form action="javascript:" class="reddit_coinbase_send_form" style="font:normal x-small verdana,arial,helvetica,sans-serif">Send <input type="text" pattern="[0-9]*(\.[0-9]*)+" title="Enter a valid BTC amount." size="8" class="reddit_coinbase_send_value" style="font:normal x-small verdana,arial,helvetica,sans-serif" value="' + token["default_value"] + '"/> BTC <input type="submit" class="reddit_coinbase_send_submit" value="Go" style="font:normal x-small verdana,arial,helvetica,sans-serif" /></form>');
+			liElement.find('.reddit_coinbase_link').remove();
+			liElement.find('.reddit_coinbase_sending').remove();
+			liElement.find('.reddit_coinbase_failed').remove();
+			liElement.find('.reddit_coinbase_send_form').on('submit', onSend);
+		});
 	};
 
 	var addLink = function() {
@@ -122,6 +126,12 @@ var addLinks = function() {
 		addLink();
 		liElement.prepend('<span class="reddit_coinbase_failed">' + msg + '...</span>');
 		liElement.find('.reddit_coinbase_link').text('try again');
+	}
+
+	var sendSuccess = function(value) {
+		addLink();
+		liElement.prepend('<span class="reddit_coinbase_failed">sent ' + value + ' BTC...</span>');
+		liElement.find('.reddit_coinbase_link').text('send more');
 	}
 
 	onGiveBitcoinClick = function() {
@@ -184,7 +194,7 @@ var addLinks = function() {
 		var postAuth = function() {
 			getAddress(function() {
 					sendMoney(function() {
-							alert("OMG, IT WORKED!!!11one");
+							sendSuccess(sendAmount);
 						}, function(msg) {
 							// Failed to send (not enough funds, etc)
 							sendFailed(msg);
