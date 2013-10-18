@@ -1,6 +1,5 @@
 import os
-from flask import Flask
-from flask import Response
+from flask import Flask, Response, request as flask_request
 import praw
 import psycopg2
 from urllib import parse
@@ -47,6 +46,10 @@ def hello(user):
 	if any(c.isspace() for c in user) or not name_regex.match(user):
 		return Response('{"success": false, "error": "Username invalid"}', headers=headers)
 
+	sender = flask_request.args.get('sender')
+	if sender is None or any(c.isspace() for c in sender) or not name_regex.match(sender):
+		sender = ""
+
 	cur.execute("SELECT address FROM name_address WHERE name = %s;", (user,))
 	row = cur.fetchone()
 
@@ -58,7 +61,12 @@ def hello(user):
 		req = request.Request("https://coinbase.com/api/v1/tokens", ''.encode('utf-8'), headers = {"User-Agent": "BitTip/1.0"})
 		data = json.loads(request.urlopen(req).readall().decode())
 		if data["success"] and data["token"] and data["token"]["token_id"] and data["token"]["address"]:
-			r.send_message(user, "Someone sent you Bitcoins as a tip", "Another Reddit user sent you some Bitcoins as a tip using BitTip! To claim your Bitcoins, please go to https://coinbase.com/claim/" + data["token"]["token_id"] + " . Login and send your Bitcoins anywhere you want (or withdraw them directly to your US Bank account). Any future tips will go to your Coinbase account automatically without any further PMs (so keep your account safe and check it for more coins!)\nWant to send tips to other Redditers? Get the plugin at http://bittip.coinbase.com")
+			if sender is "":
+				message = "An anonymous Reddit user"
+			else:
+				message = "Reddit user " + sender
+			message = message + " sent you some Bitcoins as a tip using BitTip! To claim your Bitcoins, please go to https://coinbase.com/claim/" + data["token"]["token_id"] + " . Login and send your Bitcoins anywhere you want (or withdraw them directly to your US Bank account). Any future tips will go to your Coinbase account automatically without any further PMs (so keep your account safe and check it for more coins!)\nWant to send tips to other Redditers? Get the plugin at http://bittip.coinbase.com"
+			r.send_message(user, "Someone sent you Bitcoins as a tip", message)
 			cur.execute("INSERT INTO name_address (name, address) VALUES (%s, %s);", (user, data["token"]["address"]))
 			conn.commit()
 			return Response('{"success": true, "address": "' + data["token"]["address"] + '"}', headers=headers)

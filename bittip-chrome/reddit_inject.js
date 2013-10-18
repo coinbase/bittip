@@ -78,7 +78,7 @@ var coinbaseLogin = function(success_callback, failure_callback) {
 	window.showModalDialog("https://coinbase.com/oauth/authorize?response_type=code&client_id=08f13b440b5980b907cb5ec9e7628cc9960deab3e326a3b91433f9641866bf29&client_secret=016d0adf3cfeebab5f5bcd641e8641a67ac42f523d85d6415f1f2a7d39e38346&scope=send&redirect_uri=" + chrome.extension.getURL("/oauth_response.html"));
 };
 
-
+var reddit_logged_in_user = $('div#header-bottom-right .user a').text();
 // Add links to send tips
 var addLinks = function() {
 	var user = $(this).parent().find("p.tagline a.author").text();
@@ -159,6 +159,10 @@ var addLinks = function() {
 						success_callback();
 					else if (response.errors[0].indexOf("You don't have that much") == 0) {
 						failure_callback("not enough funds");
+                    } else if (response.errors[0].indexOf("This transaction amount is below the current minimum amount to be accepted by the bitcoin network") == 0) {
+						failure_callback("value too small to send until the recipient claims their tip");
+                    } else if (response.errors[0].indexOf("This transaction requires a 0.0005 fee to be accepted by the bitcoin network") == 0) {
+						failure_callback("value too small to send until the recipient claims their tip");
 					} else {
 						console.log("Error sending money:");
 						console.log(response);
@@ -175,22 +179,31 @@ var addLinks = function() {
 
 		// Gets a user's address (possibly having the server create a coinbase account and send a reddit pm)
 		var getAddress = function(success_callback, failure_callback) {
-			$.ajax("http://bittip.herokuapp.com/getaddress/" + user, {
-				success: function(response, textStatus, jqXHR) {
-					if (response.success == true) {
-						destination_address = response.address;
-						success_callback();
-					} else {
-						console.log("Error getting address for send:");
+			chrome.storage.sync.get("remain_anonymous", function(token) {
+				if (token["remain_anonymous"] == undefined)
+					token["remain_anonymous"] = false;
+
+				var url = "http://bittip.herokuapp.com/getaddress/" + user;
+				if (!token["remain_anonymous"])
+					url += "?sender=" + reddit_logged_in_user;
+
+				$.ajax(url, {
+					success: function(response, textStatus, jqXHR) {
+						if (response.success == true) {
+							destination_address = response.address;
+							success_callback();
+						} else {
+							console.log("Error getting address for send:");
+							console.log(response);
+							failure_callback("unknown error sending");
+						}
+					},
+					error: function(response, textStatus, jqXHR) {
+						console.log("Failed to get address for send::");
 						console.log(response);
 						failure_callback("unknown error sending");
 					}
-				},
-				error: function(response, textStatus, jqXHR) {
-					console.log("Failed to get address for send::");
-					console.log(response);
-					failure_callback("unknown error sending");
-				}
+				});
 			});
 		};
 

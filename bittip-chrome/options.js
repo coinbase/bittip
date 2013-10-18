@@ -13,3 +13,6 @@ chrome.storage.sync.get('default_value', function(value) {
 	else
 		$('#amount').val('0.001');
 });
+$('#anonymous').on('change', function() {
+	chrome.storage.sync.set({'remain_anonymous': $('#anonymous').is(':checked')}, function() {});
+});
