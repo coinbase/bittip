@@ -81,35 +81,6 @@ var coinbaseLogin = function(success_callback, failure_callback) {
 	window.showModalDialog("https://coinbase.com/oauth/authorize?response_type=code&client_id=08f13b440b5980b907cb5ec9e7628cc9960deab3e326a3b91433f9641866bf29&client_secret=016d0adf3cfeebab5f5bcd641e8641a67ac42f523d85d6415f1f2a7d39e38346&scope=send&redirect_uri=" + chrome.extension.getURL("/oauth_response.html"));
 };
 
-//Responds to an arbitrary reddit object
-var respondAfterTip = function(reddit_thing_id, amount) {
-	$.ajax("http://www.reddit.com/api/me.json", {
-		type: "GET",
-		success:  function(response, textStatus, jqXHR) {
-			// Yay unreadable nexted AJAX!
-			$.ajax("http://www.reddit.com/api/comment", {
-				type: "POST",
-				data: {
-					uh: response.data.modhash,
-					api_type: "json",
-					thing_id: reddit_thing_id,
-					text: "I just sent you a tip of " + amount + " Bitcoin using [BitTip!](http://bittip.coinbase.com)"
-				},
-				success: function(response, textStatus, jqXHR) {},
-				error: function(response, textStatus, jqXHR) {
-					console.log("Failed to comment after tip:");
-					console.log(response);
-				}
-			});
-		},
-		error: function(response, textStatus, jqXHR) {
-			onsole.log("Failed to get reddit modhash to comment after tip:");
-			console.log(response);
-		},
-		cache: false
-	});
-}
-
 var reddit_logged_in_user = $('div#header-bottom-right .user a').text();
 // Add links to send tips
 var addLinks = function() {
@@ -143,7 +114,7 @@ var addLinks = function() {
 				token["default_value"] = "0.001";
 
 			liElement.empty();
-			liElement.append('<form action="javascript:" class="reddit_coinbase_send_form" style="font:normal x-small verdana,arial,helvetica,sans-serif">Send <input type="text" pattern="[0-9]*(\.[0-9]*)+" title="Enter a valid BTC amount." size="8" class="reddit_coinbase_send_value" style="font:normal x-small verdana,arial,helvetica,sans-serif" value="' + token["default_value"] + '"/> BTC&nbsp;&nbsp;<input type="checkbox" class="reddit_coinbase_send_comment">and respond to tell ' + user + ' that you tipped them <input type="submit" class="reddit_coinbase_send_submit" value="Go" style="font:normal x-small verdana,arial,helvetica,sans-serif" /></form>');
+			liElement.append('<form action="javascript:" class="reddit_coinbase_send_form" style="font:normal x-small verdana,arial,helvetica,sans-serif">Send <input type="text" pattern="[0-9]*(\.[0-9]*)+" title="Enter a valid BTC amount." size="8" class="reddit_coinbase_send_value" style="font:normal x-small verdana,arial,helvetica,sans-serif" value="' + token["default_value"] + '"/> BTC <input type="submit" class="reddit_coinbase_send_submit" value="Go" style="font:normal x-small verdana,arial,helvetica,sans-serif" /></form>');
 			liElement.find('.reddit_coinbase_send_form').on('submit', onSend);
 			liElement.find('.reddit_coinbase_send_comment').on('change', function() {
 				postCommentOnSuccess = liElement.find('.reddit_coinbase_send_comment').is(':checked');
@@ -176,14 +147,12 @@ var addLinks = function() {
 		liElement.prepend('<span id="reddit_coinbase_success_' + count + '">sent ' + value + ' BTC...</span>');
 		liElement.find('.reddit_coinbase_link').text('send more');
 
-		// TODO: why does injecting this with JQuery not work?
-		var s = document.createElement('script');
-		s.textContent = 'var elem = $("#reddit_coinbase_success_' + count + '"); console.log(elem);elem.addClass(elem.thing_id());';
-		(document.head||document.documentElement).appendChild(s);
-		s.parentNode.removeChild(s);
-
-		if (postCommentOnSuccess)
-			respondAfterTip($(liElement).find('#reddit_coinbase_success_' + count).attr('class'), sendAmount);
+		if (postCommentOnSuccess) {
+			console.log(liElement.parent());
+			console.log(liElement.parent().find('a:contains("reply")'));
+			liElement.parent().find('a:contains("reply")').get(0).click();
+			liElement.parent().parent().parent().parent().find('div.child textarea').val("I just sent you a tip of " + sendAmount + " Bitcoin using [BitTip!](http://bittip.coinbase.com)");
+		}
 	}
 
 	onGiveBitcoinClick = function() {
