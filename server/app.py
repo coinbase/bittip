@@ -58,14 +58,12 @@ def hello(user):
 		req = request.Request("https://coinbase.com/api/v1/tokens", ''.encode('utf-8'), headers = {"User-Agent": "BitTip/1.0"})
 		data = json.loads(request.urlopen(req).readall().decode())
 		if data["success"] and data["token"] and data["token"]["token_id"] and data["token"]["address"]:
-# TODO: Expire unclaimed address after 60 days?
-			r.send_message(user, "Someone sent you Bitcoins as a tip", "Another Reddit user sent you some Bitcoins as a tip using BitTip! To claim your Bitcoins, please go to https://coinbase.com/claim/" + data["token"]["token_id"] + " . Login and send your Bitcoins anywhere you want (or withdraw them directly to your US Bank account). Any future tips will go to your Coinbase account automatically without any further PMs (so keep your account safe and check it for more coins!)\nWant to send tips to other Redditers? Get the plugin at http://bittip.herokuapp.com")
+			r.send_message(user, "Someone sent you Bitcoins as a tip", "Another Reddit user sent you some Bitcoins as a tip using BitTip! To claim your Bitcoins, please go to https://coinbase.com/claim/" + data["token"]["token_id"] + " . Login and send your Bitcoins anywhere you want (or withdraw them directly to your US Bank account). Any future tips will go to your Coinbase account automatically without any further PMs (so keep your account safe and check it for more coins!)\nWant to send tips to other Redditers? Get the plugin at http://bittip.coinbase.com")
 			cur.execute("INSERT INTO name_address (name, address) VALUES (%s, %s);", (user, data["token"]["address"]))
 			conn.commit()
 			return Response('{"success": true, "address": "' + data["token"]["address"] + '"}', headers=headers)
 		else:
-			# TODO: Email doesn't matter, so try again with another random email...
-			return Response('{"success": false, "error": "User already existed but we dont know their address"}', headers=headers)
+			return Response('{"success": false, "error": "Invalid response from coinbase tokens API"}', headers=headers)
 	return Response('{"success": false, "error": "Python broke"}', headers=headers)
 
 if __name__ == '__main__':
