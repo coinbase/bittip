@@ -82,6 +82,10 @@ var coinbaseLogin = function(success_callback, failure_callback) {
 // Add links to send tips
 var addLinks = function() {
 	var user = $(this).parent().find("p.tagline a.author").text();
+	if (user == "") {
+		// In the case it is us (and we want to tip ourselves?)
+		user = $(this).parent().find("p.tagline span.head b").text();
+	}
 	$(this).append('<li class="reddit_coinbase_li"></li>');
 
 	var onGiveBitcoinClick = function() {};
