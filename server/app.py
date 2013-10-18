@@ -65,8 +65,8 @@ def hello(user):
 				message = "An anonymous Reddit user"
 			else:
 				message = "Reddit user " + sender
-			message = message + " sent you some Bitcoins as a tip using BitTip! To claim your Bitcoins, please go to https://coinbase.com/claim/" + data["token"]["token_id"] + " . Login and send your Bitcoins anywhere you want (or withdraw them directly to your US Bank account). Any future tips will go to your Coinbase account automatically without any further PMs (so keep your account safe and check it for more coins!)\nWant to send tips to other Redditers? Get the plugin at http://bittip.coinbase.com"
-			r.send_message(user, "Someone sent you Bitcoins as a tip", message)
+			message = message + " just sent you some bitcoin as a tip using BitTip!\n\nTO CLAIM YOUR BITCOIN, GO TO  \nhttps://coinbase.com/claim/" + data["token"]["token_id"] + "\n\nOnce you've signed in, future tips will flow directly into your Coinbase account without additional notification.\n\nBitcoin is a decentralized digital currency that can be used all over the world (and converted to your local currency). To send your own tips to Reddit users, grab the Chrome extension at http://bittip.coinbase.com"
+			r.send_message(user, "Someone sent you bitcoin using BitTip!", message)
 			cur.execute("INSERT INTO name_address (name, address) VALUES (%s, %s);", (user, data["token"]["address"]))
 			conn.commit()
 			return Response('{"success": true, "address": "' + data["token"]["address"] + '"}', headers=headers)

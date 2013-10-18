@@ -13,6 +13,18 @@ chrome.storage.sync.get('default_value', function(value) {
 	else
 		$('#amount').val('0.001');
 });
-$('#anonymous').on('change', function() {
-	chrome.storage.sync.set({'remain_anonymous': $('#anonymous').is(':checked')}, function() {});
+$('#comment').on('change', function() {
+	chrome.storage.sync.set({'post_comment': $('#comment').is(':checked')}, function() {});
+});
+chrome.storage.onChanged.addListener(function(changes, namespace) {
+	for (key in changes) {
+		if (key == 'post_comment' && namespace == 'sync')
+			$('#comment').prop('checked', changes[key].newValue);
+	}
+});
+chrome.storage.sync.get('post_comment', function(value) {
+	if (value['post_comment'] != undefined)
+		$('#comment').prop('checked', value['post_comment']);
+	else
+		$('#comment').prop('checked', true);
 });

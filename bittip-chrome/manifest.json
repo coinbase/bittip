@@ -3,7 +3,7 @@
 
 	"name": "BitTip",
 	"description": "Send reddit users tips they can redeem directly for Bitcoins!",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"offline_enabled": false,
 
 	"icons": { "128": "icon.png" },

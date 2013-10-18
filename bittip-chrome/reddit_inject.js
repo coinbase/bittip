@@ -2,6 +2,9 @@
 var coinbase_access_token = "";
 //TODO: Track its expiration instead of requesting a new one each time
 
+// Used as a unique id sometimes
+var success_count = 0;
+
 // Hook up a chrome message handler to get back messages when we finish OAUTH
 var login_success_callback;
 var login_failure_callback;
@@ -78,6 +81,35 @@ var coinbaseLogin = function(success_callback, failure_callback) {
 	window.showModalDialog("https://coinbase.com/oauth/authorize?response_type=code&client_id=08f13b440b5980b907cb5ec9e7628cc9960deab3e326a3b91433f9641866bf29&client_secret=016d0adf3cfeebab5f5bcd641e8641a67ac42f523d85d6415f1f2a7d39e38346&scope=send&redirect_uri=" + chrome.extension.getURL("/oauth_response.html"));
 };
 
+//Responds to an arbitrary reddit object
+var respondAfterTip = function(reddit_thing_id, amount) {
+	$.ajax("http://www.reddit.com/api/me.json", {
+		type: "GET",
+		success:  function(response, textStatus, jqXHR) {
+			// Yay unreadable nexted AJAX!
+			$.ajax("http://www.reddit.com/api/comment", {
+				type: "POST",
+				data: {
+					uh: response.data.modhash,
+					api_type: "json",
+					thing_id: reddit_thing_id,
+					text: "I just sent you a tip of " + amount + " Bitcoin using [BitTip!](http://bittip.coinbase.com)"
+				},
+				success: function(response, textStatus, jqXHR) {},
+				error: function(response, textStatus, jqXHR) {
+					console.log("Failed to comment after tip:");
+					console.log(response);
+				}
+			});
+		},
+		error: function(response, textStatus, jqXHR) {
+			onsole.log("Failed to get reddit modhash to comment after tip:");
+			console.log(response);
+		},
+		cache: false
+	});
+}
+
 var reddit_logged_in_user = $('div#header-bottom-right .user a').text();
 // Add links to send tips
 var addLinks = function() {
@@ -93,14 +125,13 @@ var addLinks = function() {
 
 	// The amount to send
 	var sendAmount = 0;
+	// if (true) respond with a comment after tipping
+	var postCommentOnSuccess;
 
 	var onSend = function() {
 		sendAmount = liElement.find('.reddit_coinbase_send_value').val();
-		console.log(sendAmount);
 
-		liElement.find('.reddit_coinbase_send_form').remove();
-		liElement.find('.reddit_coinbase_link').remove();
-		liElement.find('.reddit_coinbase_failed').remove();
+		liElement.empty();
 		liElement.append('<span class="reddit_coinbase_sending">sending ' + sendAmount + ' BTC<img style="width: 10px; height: 10px;" class="reddit_coinbase_spinner" src="' + chrome.extension.getURL('ajax-loader.gif') + '" /></span>');
 
 		onGiveBitcoinClick();
@@ -111,18 +142,25 @@ var addLinks = function() {
 			if (token["default_value"] == undefined)
 				token["default_value"] = "0.001";
 
-			liElement.append('<form action="javascript:" class="reddit_coinbase_send_form" style="font:normal x-small verdana,arial,helvetica,sans-serif">Send <input type="text" pattern="[0-9]*(\.[0-9]*)+" title="Enter a valid BTC amount." size="8" class="reddit_coinbase_send_value" style="font:normal x-small verdana,arial,helvetica,sans-serif" value="' + token["default_value"] + '"/> BTC <input type="submit" class="reddit_coinbase_send_submit" value="Go" style="font:normal x-small verdana,arial,helvetica,sans-serif" /></form>');
-			liElement.find('.reddit_coinbase_link').remove();
-			liElement.find('.reddit_coinbase_sending').remove();
-			liElement.find('.reddit_coinbase_failed').remove();
+			liElement.empty();
+			liElement.append('<form action="javascript:" class="reddit_coinbase_send_form" style="font:normal x-small verdana,arial,helvetica,sans-serif">Send <input type="text" pattern="[0-9]*(\.[0-9]*)+" title="Enter a valid BTC amount." size="8" class="reddit_coinbase_send_value" style="font:normal x-small verdana,arial,helvetica,sans-serif" value="' + token["default_value"] + '"/> BTC&nbsp;&nbsp;<input type="checkbox" class="reddit_coinbase_send_comment">and respond to tell ' + user + ' that you tipped them <input type="submit" class="reddit_coinbase_send_submit" value="Go" style="font:normal x-small verdana,arial,helvetica,sans-serif" /></form>');
 			liElement.find('.reddit_coinbase_send_form').on('submit', onSend);
+			liElement.find('.reddit_coinbase_send_comment').on('change', function() {
+				postCommentOnSuccess = liElement.find('.reddit_coinbase_send_comment').is(':checked');
+				chrome.storage.sync.set({'post_comment': postCommentOnSuccess}, function() {});
+			});
+			chrome.storage.sync.get("post_comment", function(token) {
+				if (token["post_comment"] == undefined)
+					token["post_comment"] = false;
+				postCommentOnSuccess = token["post_comment"];
+				liElement.find('.reddit_coinbase_send_comment').prop('checked', postCommentOnSuccess);
+			});
 		});
 	};
 
 	var addLink = function() {
+		liElement.empty();
 		liElement.append('<a class="reddit_coinbase_link" href="javascript:">give bitcoin</a>');
-		liElement.find('.reddit_coinbase_send_form').remove();
-		liElement.find('.reddit_coinbase_sending').remove();
 		liElement.find('.reddit_coinbase_link').on('click', enableInput);
 	};
 
@@ -134,8 +172,18 @@ var addLinks = function() {
 
 	var sendSuccess = function(value) {
 		addLink();
-		liElement.prepend('<span class="reddit_coinbase_failed">sent ' + value + ' BTC...</span>');
+		var count = success_count++;
+		liElement.prepend('<span id="reddit_coinbase_success_' + count + '">sent ' + value + ' BTC...</span>');
 		liElement.find('.reddit_coinbase_link').text('send more');
+
+		// TODO: why does injecting this with JQuery not work?
+		var s = document.createElement('script');
+		s.textContent = 'var elem = $("#reddit_coinbase_success_' + count + '"); console.log(elem);elem.addClass(elem.thing_id());';
+		(document.head||document.documentElement).appendChild(s);
+		s.parentNode.removeChild(s);
+
+		if (postCommentOnSuccess)
+			respondAfterTip($(liElement).find('#reddit_coinbase_success_' + count).attr('class'), sendAmount);
 	}
 
 	onGiveBitcoinClick = function() {
@@ -179,31 +227,26 @@ var addLinks = function() {
 
 		// Gets a user's address (possibly having the server create a coinbase account and send a reddit pm)
 		var getAddress = function(success_callback, failure_callback) {
-			chrome.storage.sync.get("remain_anonymous", function(token) {
-				if (token["remain_anonymous"] == undefined)
-					token["remain_anonymous"] = false;
+			var url = "http://bittip.herokuapp.com/getaddress/" + user;
+			if (liElement.find('.reddit_coinbase_send_comment').is(':checked'))
+				url += "?sender=" + reddit_logged_in_user;
 
-				var url = "http://bittip.herokuapp.com/getaddress/" + user;
-				if (!token["remain_anonymous"])
-					url += "?sender=" + reddit_logged_in_user;
-
-				$.ajax(url, {
-					success: function(response, textStatus, jqXHR) {
-						if (response.success == true) {
-							destination_address = response.address;
-							success_callback();
-						} else {
-							console.log("Error getting address for send:");
-							console.log(response);
-							failure_callback("unknown error sending");
-						}
-					},
-					error: function(response, textStatus, jqXHR) {
-						console.log("Failed to get address for send::");
+			$.ajax(url, {
+				success: function(response, textStatus, jqXHR) {
+					if (response.success == true) {
+						destination_address = response.address;
+						success_callback();
+					} else {
+						console.log("Error getting address for send:");
 						console.log(response);
 						failure_callback("unknown error sending");
 					}
-				});
+				},
+				error: function(response, textStatus, jqXHR) {
+					console.log("Failed to get address for send::");
+					console.log(response);
+					failure_callback("unknown error sending");
+				}
 			});
 		};
 
