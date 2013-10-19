@@ -167,9 +167,9 @@ var addLinks = function() {
 					else if (response.errors[0].indexOf("You don't have that much") == 0) {
 						failure_callback("not enough funds");
                     } else if (response.errors[0].indexOf("This transaction amount is below the current minimum amount to be accepted by the bitcoin network") == 0) {
-						failure_callback("value too small to send until the recipient claims their tip");
+						failure_callback("value too small to send until the recipient claims their first tip");
                     } else if (response.errors[0].indexOf("This transaction requires a 0.0005 fee to be accepted by the bitcoin network") == 0) {
-						failure_callback("value too small to send until the recipient claims their tip");
+						failure_callback("value too small to send until the recipient claims their first tip");
 					} else {
 						console.log("Error sending money:");
 						console.log(response);
