@@ -100,7 +100,7 @@ var addLinks = function() {
 		sendCurrency = liElement.find('.reddit_coinbase_send_currency').val();
 
 		liElement.empty();
-		liElement.append('<span class="reddit_coinbase_sending">sending ' + sendAmount + ' BTC<img style="width: 10px; height: 10px;" class="reddit_coinbase_spinner" src="' + chrome.extension.getURL('ajax-loader.gif') + '" /></span>');
+		liElement.append('<span class="reddit_coinbase_sending">sending ' + sendAmount + ' ' + sendCurrency + '<img style="width: 10px; height: 10px;" class="reddit_coinbase_spinner" src="' + chrome.extension.getURL('ajax-loader.gif') + '" /></span>');
 
 		onGiveBitcoinClick();
 	};
@@ -110,9 +110,15 @@ var addLinks = function() {
 			if (token["default_value"] == undefined)
 				token["default_value"] = "0.001";
 
-			liElement.empty();
-			liElement.append('<form action="javascript:" class="reddit_coinbase_send_form" style="font:normal x-small verdana,arial,helvetica,sans-serif">Send <input type="text" pattern="[0-9]*(\.[0-9]*)+" title="Enter a valid BTC amount." size="8" class="reddit_coinbase_send_value" style="font:normal x-small verdana,arial,helvetica,sans-serif" value="' + token["default_value"] + '"/> <select class="reddit_coinbase_send_currency"><option value="BTC">BTC</option><option value="USD">USD</option><option value="EUR">EUR</option></select> <input type="submit" class="reddit_coinbase_send_submit" value="Go" style="font:normal x-small verdana,arial,helvetica,sans-serif" /></form>');
-			liElement.find('.reddit_coinbase_send_form').on('submit', onSend);
+			chrome.storage.sync.get("default_currency", function(currency) {
+				if (currency["default_currency"] == undefined)
+					currency["default_currency"] = "BTC";
+
+				liElement.empty();
+				liElement.append('<form action="javascript:" class="reddit_coinbase_send_form" style="font:normal x-small verdana,arial,helvetica,sans-serif">Send <input type="text" pattern="[0-9]*(\.[0-9]*)+" title="Enter a valid BTC amount." size="8" class="reddit_coinbase_send_value" style="font:normal x-small verdana,arial,helvetica,sans-serif" value="' + token["default_value"] + '"/> <select class="reddit_coinbase_send_currency"><option value="BTC" class="reddit_coinbase_send_BTC">BTC</option><option value="USD" class="reddit_coinbase_send_USD">USD</option><option value="EUR" class="reddit_coinbase_send_EUR">EUR</option></select> <input type="submit" class="reddit_coinbase_send_submit" value="Go" style="font:normal x-small verdana,arial,helvetica,sans-serif" /></form>');
+				liElement.find('.reddit_coinbase_send_form').on('submit', onSend);
+				liElement.find('.reddit_coinbase_send_' + currency["default_currency"]).attr("selected", true);
+			});
 		});
 	};
 

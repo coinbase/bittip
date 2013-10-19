@@ -13,6 +13,15 @@ chrome.storage.sync.get('default_value', function(value) {
 	else
 		$('#amount').val('0.001');
 });
+
+$('#currency').on('change', function() {
+	chrome.storage.sync.set({'default_currency': $('#currency').val()}, function() {});
+});
+chrome.storage.sync.get('default_currency', function(value) {
+	if (value['default_currency'] != undefined)
+		$('#' + value['default_currency']).attr('selected', true);
+});
+
 $('#comment').on('change', function() {
 	chrome.storage.sync.set({'post_comment': $('#comment').is(':checked')}, function() {});
 });
