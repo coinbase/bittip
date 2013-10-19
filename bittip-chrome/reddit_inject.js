@@ -2,9 +2,6 @@
 var coinbase_access_token = "";
 //TODO: Track its expiration instead of requesting a new one each time
 
-// Used as a unique id sometimes
-var success_count = 0;
-
 // Hook up a chrome message handler to get back messages when we finish OAUTH
 var login_success_callback;
 var login_failure_callback;
@@ -85,9 +82,9 @@ var reddit_logged_in_user = $('div#header-bottom-right .user a').text();
 // Add links to send tips
 var addLinks = function() {
 	var user = $(this).parent().find("p.tagline a.author").text();
-	if (user == "") {
-		// In the case it is us (and we want to tip ourselves?)
-		user = $(this).parent().find("p.tagline span.head b").text();
+	if (user == "" || user == $('div#header-bottom-right span.user a').text()) {
+		// In the case it is us
+		return;
 	}
 	$(this).append('<li class="reddit_coinbase_li"></li>');
 
