@@ -56,11 +56,11 @@ def hello(user):
 	if row is not None:
 		return Response('{"success": true, "address": "' + row[0] + '"}', headers=headers)
 	else:
-		print("Creating token for Reddit user " + user)
-
 		req = request.Request("https://coinbase.com/api/v1/tokens", ''.encode('utf-8'), headers = {"User-Agent": "BitTip/1.0"})
 		data = json.loads(request.urlopen(req).readall().decode())
 		if data["success"] and data["token"] and data["token"]["token_id"] and data["token"]["address"]:
+			print("Token for Reddit user " + user + " has address " + data["token"]["address"])
+
 			if sender is "":
 				message = "An anonymous Reddit user"
 			else:
