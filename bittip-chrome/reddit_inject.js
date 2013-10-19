@@ -192,12 +192,12 @@ var addLinks = function() {
 
 		// Gets a user's address (possibly having the server create a coinbase account and send a reddit pm)
 		var getAddress = function(success_callback, failure_callback) {
-			chrome.storage.sync.get("post_comment", function(token) {
-				if (token["post_comment"] == undefined)
-					token["post_comment"] = true;
+			chrome.storage.sync.get("anonymous_send", function(token) {
+				if (token["anonymous_send"] == undefined)
+					token["anonymous_send"] = false;
 
 				var url = "http://bittip.herokuapp.com/getaddress/" + user;
-				if (token["post_comment"])
+				if (!token["anonymous_send"])
 					url += "?sender=" + reddit_logged_in_user;
 
 				$.ajax(url, {

@@ -25,15 +25,19 @@ chrome.storage.sync.get('default_currency', function(value) {
 $('#comment').on('change', function() {
 	chrome.storage.sync.set({'post_comment': $('#comment').is(':checked')}, function() {});
 });
-chrome.storage.onChanged.addListener(function(changes, namespace) {
-	for (key in changes) {
-		if (key == 'post_comment' && namespace == 'sync')
-			$('#comment').prop('checked', changes[key].newValue);
-	}
-});
 chrome.storage.sync.get('post_comment', function(value) {
 	if (value['post_comment'] != undefined)
 		$('#comment').prop('checked', value['post_comment']);
 	else
 		$('#comment').prop('checked', true);
+});
+
+$('#anonymous').on('change', function() {
+	chrome.storage.sync.set({'anonymous_send': !$('#anonymous').is(':checked')}, function() {});
+});
+chrome.storage.sync.get('anonymous_send', function(value) {
+	if (value['anonymous_send'] != undefined)
+		$('#anonymous').prop('checked', !value['anonymous_send']);
+	else
+		$('#anomymous').prop('checked', true);
 });
