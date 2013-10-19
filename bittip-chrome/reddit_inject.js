@@ -186,26 +186,31 @@ var addLinks = function() {
 
 		// Gets a user's address (possibly having the server create a coinbase account and send a reddit pm)
 		var getAddress = function(success_callback, failure_callback) {
-			var url = "http://bittip.herokuapp.com/getaddress/" + user;
-			if (liElement.find('.reddit_coinbase_send_comment').is(':checked'))
-				url += "?sender=" + reddit_logged_in_user;
+			chrome.storage.sync.get("post_comment", function(token) {
+				if (token["post_comment"] == undefined)
+					token["post_comment"] = true;
 
-			$.ajax(url, {
-				success: function(response, textStatus, jqXHR) {
-					if (response.success == true) {
-						destination_address = response.address;
-						success_callback();
-					} else {
-						console.log("Error getting address for send:");
+				var url = "http://bittip.herokuapp.com/getaddress/" + user;
+				if (token["post_comment"])
+					url += "?sender=" + reddit_logged_in_user;
+
+				$.ajax(url, {
+					success: function(response, textStatus, jqXHR) {
+						if (response.success == true) {
+							destination_address = response.address;
+							success_callback();
+						} else {
+							console.log("Error getting address for send:");
+							console.log(response);
+							failure_callback("unknown error sending");
+						}
+					},
+					error: function(response, textStatus, jqXHR) {
+						console.log("Failed to get address for send::");
 						console.log(response);
 						failure_callback("unknown error sending");
 					}
-				},
-				error: function(response, textStatus, jqXHR) {
-					console.log("Failed to get address for send::");
-					console.log(response);
-					failure_callback("unknown error sending");
-				}
+				});
 			});
 		};
 
