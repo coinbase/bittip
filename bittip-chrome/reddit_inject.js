@@ -93,9 +93,11 @@ var addLinks = function() {
 
 	// The amount to send
 	var sendAmount = 0;
+	var sendCurrency = 'BTC';
 
 	var onSend = function() {
 		sendAmount = liElement.find('.reddit_coinbase_send_value').val();
+		sendCurrency = liElement.find('.reddit_coinbase_send_currency').val();
 
 		liElement.empty();
 		liElement.append('<span class="reddit_coinbase_sending">sending ' + sendAmount + ' BTC<img style="width: 10px; height: 10px;" class="reddit_coinbase_spinner" src="' + chrome.extension.getURL('ajax-loader.gif') + '" /></span>');
@@ -109,7 +111,7 @@ var addLinks = function() {
 				token["default_value"] = "0.001";
 
 			liElement.empty();
-			liElement.append('<form action="javascript:" class="reddit_coinbase_send_form" style="font:normal x-small verdana,arial,helvetica,sans-serif">Send <input type="text" pattern="[0-9]*(\.[0-9]*)+" title="Enter a valid BTC amount." size="8" class="reddit_coinbase_send_value" style="font:normal x-small verdana,arial,helvetica,sans-serif" value="' + token["default_value"] + '"/> BTC <input type="submit" class="reddit_coinbase_send_submit" value="Go" style="font:normal x-small verdana,arial,helvetica,sans-serif" /></form>');
+			liElement.append('<form action="javascript:" class="reddit_coinbase_send_form" style="font:normal x-small verdana,arial,helvetica,sans-serif">Send <input type="text" pattern="[0-9]*(\.[0-9]*)+" title="Enter a valid BTC amount." size="8" class="reddit_coinbase_send_value" style="font:normal x-small verdana,arial,helvetica,sans-serif" value="' + token["default_value"] + '"/> <select class="reddit_coinbase_send_currency"><option value="BTC">BTC</option><option value="USD">USD</option><option value="EUR">EUR</option></select> <input type="submit" class="reddit_coinbase_send_submit" value="Go" style="font:normal x-small verdana,arial,helvetica,sans-serif" /></form>');
 			liElement.find('.reddit_coinbase_send_form').on('submit', onSend);
 		});
 	};
@@ -126,9 +128,9 @@ var addLinks = function() {
 		liElement.find('.reddit_coinbase_link').text('try again');
 	}
 
-	var sendSuccess = function(value) {
+	var sendSuccess = function() {
 		addLink();
-		liElement.prepend('<span>sent ' + value + ' BTC...</span>');
+		liElement.prepend('<span>sent ' + sendAmount + ' ' + sendCurrency + '...</span>');
 		liElement.find('.reddit_coinbase_link').text('send more');
 
 		chrome.storage.sync.get("post_comment", function(token) {
@@ -137,7 +139,7 @@ var addLinks = function() {
 
 			if (token["post_comment"]) {
 				liElement.parent().find('a:contains("reply")').get(0).click();
-				liElement.parent().parent().parent().parent().find('div.child textarea').val("I just sent you a tip of " + sendAmount + " Bitcoin using [BitTip!](http://bittip.coinbase.com)");
+				liElement.parent().parent().parent().parent().find('div.child textarea').val("I just sent you a tip of " + sendAmount + " " + sendCurrency + " using [BitTip!](http://bittip.coinbase.com)");
 			}
 		});
 	}
@@ -154,7 +156,8 @@ var addLinks = function() {
 					access_token: coinbase_access_token,
 					transaction: {
 						to: destination_address,
-						amount: sendAmount,
+						amount_string: sendAmount,
+						amount_currency_iso: sendCurrency,
 						notes: "Tip from a Reddit user"
 					}
 				},
@@ -210,7 +213,7 @@ var addLinks = function() {
 		var postAuth = function() {
 			getAddress(function() {
 					sendMoney(function() {
-							sendSuccess(sendAmount);
+							sendSuccess();
 						}, function(msg) {
 							// Failed to send (not enough funds, etc)
 							sendFailed(msg);
