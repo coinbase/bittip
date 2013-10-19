@@ -96,8 +96,6 @@ var addLinks = function() {
 
 	// The amount to send
 	var sendAmount = 0;
-	// if (true) respond with a comment after tipping
-	var postCommentOnSuccess;
 
 	var onSend = function() {
 		sendAmount = liElement.find('.reddit_coinbase_send_value').val();
@@ -116,16 +114,6 @@ var addLinks = function() {
 			liElement.empty();
 			liElement.append('<form action="javascript:" class="reddit_coinbase_send_form" style="font:normal x-small verdana,arial,helvetica,sans-serif">Send <input type="text" pattern="[0-9]*(\.[0-9]*)+" title="Enter a valid BTC amount." size="8" class="reddit_coinbase_send_value" style="font:normal x-small verdana,arial,helvetica,sans-serif" value="' + token["default_value"] + '"/> BTC <input type="submit" class="reddit_coinbase_send_submit" value="Go" style="font:normal x-small verdana,arial,helvetica,sans-serif" /></form>');
 			liElement.find('.reddit_coinbase_send_form').on('submit', onSend);
-			liElement.find('.reddit_coinbase_send_comment').on('change', function() {
-				postCommentOnSuccess = liElement.find('.reddit_coinbase_send_comment').is(':checked');
-				chrome.storage.sync.set({'post_comment': postCommentOnSuccess}, function() {});
-			});
-			chrome.storage.sync.get("post_comment", function(token) {
-				if (token["post_comment"] == undefined)
-					token["post_comment"] = false;
-				postCommentOnSuccess = token["post_comment"];
-				liElement.find('.reddit_coinbase_send_comment').prop('checked', postCommentOnSuccess);
-			});
 		});
 	};
 
@@ -143,16 +131,18 @@ var addLinks = function() {
 
 	var sendSuccess = function(value) {
 		addLink();
-		var count = success_count++;
-		liElement.prepend('<span id="reddit_coinbase_success_' + count + '">sent ' + value + ' BTC...</span>');
+		liElement.prepend('<span>sent ' + value + ' BTC...</span>');
 		liElement.find('.reddit_coinbase_link').text('send more');
 
-		if (postCommentOnSuccess) {
-			console.log(liElement.parent());
-			console.log(liElement.parent().find('a:contains("reply")'));
-			liElement.parent().find('a:contains("reply")').get(0).click();
-			liElement.parent().parent().parent().parent().find('div.child textarea').val("I just sent you a tip of " + sendAmount + " Bitcoin using [BitTip!](http://bittip.coinbase.com)");
-		}
+		chrome.storage.sync.get("post_comment", function(token) {
+			if (token["post_comment"] == undefined)
+				token["post_comment"] = true;
+
+			if (token["post_comment"]) {
+				liElement.parent().find('a:contains("reply")').get(0).click();
+				liElement.parent().parent().parent().parent().find('div.child textarea').val("I just sent you a tip of " + sendAmount + " Bitcoin using [BitTip!](http://bittip.coinbase.com)");
+			}
+		});
 	}
 
 	onGiveBitcoinClick = function() {
