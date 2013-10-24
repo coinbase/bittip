@@ -17,6 +17,11 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
 				code: message.code_token,
 				redirect_uri: chrome.extension.getURL("/oauth_response.html"),
 				client_id: "08f13b440b5980b907cb5ec9e7628cc9960deab3e326a3b91433f9641866bf29",
+				// Ideally we would keep the client_secret secret, however there are essentially no threats that aren't easily addressed with this public.
+				// The reason for keeping this secret is so that if a malicious person were to clone the reddit tipbot (or any Coinbase app) and steal user's money, Coinbase could immediately blacklist the client_id making the calls and break the app.
+				// Though the possibility that such an attacker could use the real app's secret slows that a bit, it is still possible to push a new client_id/_secret to the real app and disable the old one.
+				// Sadly, for any motivated attacker, there is no way to prevent this (especially in Chrome, where we can easily see all the requests being made, including their headers, by simply pulling up the developer tools)
+				// (well...unless we were to do a native app and require TXT and a TPM-measured environment.......)
 				client_secret: "016d0adf3cfeebab5f5bcd641e8641a67ac42f523d85d6415f1f2a7d39e38346"
 			},
 			success: function(response, textStatus, jqXHR) {
