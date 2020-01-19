@@ -1,6 +1,6 @@
 Flask==0.10.1
 Jinja2==2.7.1
-Werkzeug==0.9.1
+Werkzeug==0.15.3
 distribute==0.6.36
 praw==2.1.10
 psycopg2==2.5.1
